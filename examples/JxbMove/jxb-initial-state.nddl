@@ -1,0 +1,41 @@
+// jxb-initial-state.nddl
+// Problem instance: arm starts at base1, must reach base3.
+//
+// Communication windows and occlusion at base2 modeled as
+// facts on timelines (from PDDL timed-initial-literals).
+
+#include "PlannerConfig.nddl"
+#include "jxb-model.nddl"
+
+// Planner: horizon [0, 3000], max 500 steps
+PlannerConfig world = new PlannerConfig(0, 3000, 500);
+
+// Create objects
+CommWindow     commState = new CommWindow();
+OcclusionBase2 occBase2  = new OcclusionBase2();
+Arm            arm       = new Arm(commState, occBase2);
+
+close();
+
+// ===== Communication windows =====
+fact(commState.InComms  comm1);   eq(comm1.start,   0);  eq(comm1.end,   660);
+fact(commState.OutComms nocomm1); eq(nocomm1.start, 660); eq(nocomm1.end, 690);
+fact(commState.InComms  comm2);   eq(comm2.start,   690); eq(comm2.end,  1200);
+fact(commState.OutComms nocomm2); eq(nocomm2.start,1200); eq(nocomm2.end,1500);
+fact(commState.InComms  comm3);   eq(comm3.start,  1500); eq(comm3.end,  2900);
+
+// ===== Occlusion at base2 =====
+fact(occBase2.Inactive occ_off1); eq(occ_off1.start,   0); eq(occ_off1.end,  690);
+fact(occBase2.Active   occ_on1);  eq(occ_on1.start,  690); eq(occ_on1.end,   720);
+fact(occBase2.Inactive occ_off2); eq(occ_off2.start, 720); eq(occ_off2.end, 1500);
+fact(occBase2.Active   occ_on2);  eq(occ_on2.start, 1500); eq(occ_on2.end,  1650);
+fact(occBase2.Inactive occ_off3); eq(occ_off3.start,1650); eq(occ_off3.end, 3000);
+
+// ===== Initial state: arm at base1 =====
+fact(arm.AtBase1 init);
+eq(init.start, 0);
+
+// ===== Goal: arm at base3 =====
+goal(arm.AtBase3 goalPos);
+leq(1, goalPos.start);
+leq(goalPos.end, 3000);

@@ -1,0 +1,87 @@
+// jxb-model.nddl
+// Domain model for robotic arm movement along a linear track.
+//
+// Converted from PDDL+ domain "jxb_move". EUROPA does not support
+// continuous processes, so durations are pre-computed from the
+// trapezoidal velocity profile:
+//   T = 2*(v_max/a_max) + (dist - v_max^2/a_max) / v_max
+//   with v_max = 0.5, a_max = 0.2.
+//
+// Path:  base1 -> on_900_base2 -> base2 -> on_900_base3 -> base3
+//        locId:  1        2          3          4            5
+
+// Communication state timeline (models timed-initial-literals)
+class CommWindow extends Timeline
+{
+    predicate InComms  {}
+    predicate OutComms {}
+}
+
+// Occlusion state at base2 (models timed-initial-literals)
+class OcclusionBase2 extends Timeline
+{
+    predicate Active   {}
+    predicate Inactive {}
+}
+
+// Robotic arm position tracked on a Timeline
+class Arm extends Timeline
+{
+    CommWindow      comm;
+    OcclusionBase2  occlusion;
+
+    predicate AtBase1       {}   // locId=1
+    predicate AtOn900Base2  {}   // locId=2
+    predicate AtBase2       {}   // locId=3
+    predicate AtOn900Base3  {}   // locId=4
+    predicate AtBase3       {}   // locId=5
+
+    // Four dedicated move actions (one per segment)
+    action MoveToOn900Base2  {}  // base1 -> on_900_base2, T=523s
+    action MoveToBase2       {}  // on_900_base2 -> base2, T=203s
+    action MoveToOn900Base3  {}  // base2 -> on_900_base3, T=583s
+    action MoveToBase3       {}  // on_900_base3 -> base3, T=203s
+
+    Arm(CommWindow _c, OcclusionBase2 _o) {
+        comm      = _c;
+        occlusion = _o;
+    }
+}
+
+// ====== Segment 1: base1 -> on_900_base2, dist=260, T=523s ======
+Arm::MoveToOn900Base2
+{
+    eq(duration, 523);
+    met_by(condition object.AtBase1);
+    meets(effect object.AtOn900Base2);
+    contained_by(condition object.comm.InComms);
+}
+
+// ====== Segment 2: on_900_base2 -> base2, dist=100, T=203s ======
+Arm::MoveToBase2
+{
+    eq(duration, 203);
+    met_by(condition object.AtOn900Base2);
+    meets(effect object.AtBase2);
+    contained_by(condition object.comm.InComms);
+}
+
+// ====== Segment 3: base2 -> on_900_base3, dist=290, T=583s ======
+// Requires no occlusion at base2 during the move
+Arm::MoveToOn900Base3
+{
+    eq(duration, 583);
+    met_by(condition object.AtBase2);
+    meets(effect object.AtOn900Base3);
+    contained_by(condition object.comm.InComms);
+    contained_by(condition object.occlusion.Inactive);
+}
+
+// ====== Segment 4: on_900_base3 -> base3, dist=100, T=203s ======
+Arm::MoveToBase3
+{
+    eq(duration, 203);
+    met_by(condition object.AtOn900Base3);
+    meets(effect object.AtBase3);
+    contained_by(condition object.comm.InComms);
+}
