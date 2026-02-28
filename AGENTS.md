@@ -26,7 +26,7 @@ make -j$(nproc)
 These must be installed as system packages or built from source:
 - `libboost-dev`, `swig`, `antlr`, `libcppunit-dev`, `libalgorithm-diff-perl` (apt)
 - **libantlr3c-3.4** — built from source (`www.antlr3.org/download/C/libantlr3c-3.4.tar.gz`), installed to `/usr/local`
-- **ANTLR 3.4 JAR** — downloaded to `ext/lib/antlr-3.jar` (must be version 3.4 to match the C runtime; version 3.5.x produces incompatible generated code)
+- **ANTLR 3.2 JAR** — downloaded to `ext/lib/antlr-3.jar`. **Critical: must be version 3.2** (`antlr-3.2.jar`). Version 3.4 generates tree walker code that fails at runtime, and version 3.5.x generates incompatible C code
 
 ### Tests
 
@@ -34,9 +34,32 @@ These must be installed as system packages or built from source:
 cd /workspace/build && ctest
 ```
 
-- **8 core module tests pass**: TinyXml, Utils, ConstraintEngine, PlanDatabase, RulesEngine, TemporalNetwork, ANML, System.
-- **35 NDDL-related tests fail** (segfault/abort): Known upstream issue — the ANTLR3-generated NDDL parser crashes on GCC 13 / modern C++. All `run-nddl-interp-*` tests depend on NDDL and are affected.
-- To run only the passing core tests: `ctest -R "^(TinyXml|Utils|ConstraintEngine|PlanDatabase|RulesEngine|TemporalNetwork|ANML|System)Test$"`
+- **All 43 tests pass** when using the correct ANTLR 3.2 JAR.
+
+### Running the Rover example
+
+```bash
+cd /workspace/examples/Rover
+# Compile: link against all EUROPA libraries in the build directory
+g++ -fpermissive -Wno-terminate \
+  $(find /workspace/src/PLASMA -maxdepth 2 -type d \( -name base -o -name component \) -printf '-I%p ') \
+  -I/workspace/src/PLASMA/Utils -I/usr/local/include \
+  -o Rover-planner Rover-Main.cc RoverCustomCode.cc ModuleRover.cc \
+  -L/workspace/build/src/PLASMA/System -lSystem_g \
+  -L/workspace/build/src/PLASMA/Resource -lResource_g \
+  -L/workspace/build/src/PLASMA/Solvers -lSolvers_g \
+  -L/workspace/build/src/PLASMA/NDDL -lNDDL_g \
+  -L/workspace/build/src/PLASMA/TemporalNetwork -lTemporalNetwork_g \
+  -L/workspace/build/src/PLASMA/RulesEngine -lRulesEngine_g \
+  -L/workspace/build/src/PLASMA/PlanDatabase -lPlanDatabase_g \
+  -L/workspace/build/src/PLASMA/ConstraintEngine -lConstraintEngine_g \
+  -L/workspace/build/src/PLASMA/Utils -lUtils_g \
+  -L/workspace/build/src/PLASMA/TinyXml -lTinyXml_g \
+  -L/usr/local/lib -lantlr3c \
+  -Wl,-rpath,/workspace/build/src/PLASMA/{System,Resource,Solvers,NDDL,TemporalNetwork,RulesEngine,PlanDatabase,ConstraintEngine,Utils,TinyXml}
+# Run with PLASMA_HOME set so the NDDL include path resolves
+PLASMA_HOME=/workspace ./Rover-planner Rover-initial-state.nddl PlannerConfig.xml
+```
 
 ### Project structure (key paths)
 - `src/PLASMA/` — C++ core modules (Utils, ConstraintEngine, PlanDatabase, RulesEngine, TemporalNetwork, NDDL, Solvers, Resource, ANML, System)
