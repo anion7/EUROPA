@@ -1,0 +1,33 @@
+language: cpp
+os:
+  - linux
+  - osx
+compiler:
+  - gcc
+  - clang
+env:
+  - OPTIMIZE=0 COVERAGE=0
+  - OPTIMIZE=1 COVERAGE=0
+  - OPTIMIZE=0 COVERAGE=1
+matrix:
+  exclude:
+    - compiler: clang
+      env: OPTIMIZE=0 COVERAGE=1
+    - os: osx
+      compiler: gcc
+before_install:
+  - sudo pip install -U cpp-coveralls
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+install:
+  - wget -O - http://cpanmin.us | sudo perl - --self-upgrade
+  - sudo cpanm Algorithm::Diff
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install antlr@3 swig; else sudo apt-get update -qq && sudo apt-get install libboost-dev antlr swig; fi
+  - wget https://github.com/shridharmishra4/europa-pso/raw/master/ThirdParty/trunk/cppunit-1.12.1.tar.bz2 -O /tmp/cppunit-1.12.1.tar.bz2
+  - tar -jxf /tmp/cppunit-1.12.1.tar.bz2
+  - pushd cppunit-1.12.1 && ./configure --disable-dependency-tracking --disable-doxygen --disable-shared --prefix=/usr/local && make && sudo make install && popd
+  - wget http://www.antlr3.org/download/C/libantlr3c-3.4.tar.gz -O /tmp/libantlr3c-3.4.tar.gz
+  - tar -zxf /tmp/libantlr3c-3.4.tar.gz
+  - pushd libantlr3c-3.4 && ./configure --prefix=/usr/local --enable-64bit && make && sudo make install && popd
+script: mkdir build && cd build && cmake -DOPTIMIZE=$OPTIMIZE -DCOVERAGE=$COVERAGE .. && make -j2 && ctest
+after_success:
+  - coveralls --gcov-options '\-lp'
