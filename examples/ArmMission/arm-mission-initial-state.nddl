@@ -1,0 +1,44 @@
+// arm-mission-initial-state.nddl
+// Simplified: 5 large comm windows, fixed WaitForMotion endpoint.
+
+#include "PlannerConfig.nddl"
+#include "arm-mission-model.nddl"
+
+PlannerConfig world = new PlannerConfig(0, 55000, 5000);
+
+CommWindow   commState = new CommWindow();
+OcclusionSWA occSWA    = new OcclusionSWA();
+Arm          arm       = new Arm(commState, occSWA);
+
+close();
+
+// ═══ 5 large comm windows ═══
+fact(commState.InComms  c01); eq(c01.start, 0);     eq(c01.end, 4000);
+fact(commState.OutComms g01); eq(g01.start, 4000);  eq(g01.end, 22000);
+fact(commState.InComms  c02); eq(c02.start, 22000); eq(c02.end, 26200);
+fact(commState.OutComms g02); eq(g02.start, 26200); eq(g02.end, 27600);
+fact(commState.InComms  c03); eq(c03.start, 27600); eq(c03.end, 46000);
+fact(commState.OutComms g03); eq(g03.start, 46000); eq(g03.end, 49000);
+fact(commState.InComms  c04); eq(c04.start, 49000); eq(c04.end, 55000);
+
+// ═══ SWA occlusion ═══
+fact(occSWA.Inactive o01); eq(o01.start, 0);     eq(o01.end, 40000);
+fact(occSWA.Active   o02); eq(o02.start, 40000); eq(o02.end, 40400);
+fact(occSWA.Inactive o03); eq(o03.start, 40400); eq(o03.end, 55000);
+
+// ═══ Phase 1 facts ═══
+fact(arm.BigArmRestart p1a);
+eq(p1a.start, 0); eq(p1a.duration, 980);
+
+fact(arm.SmallArmRestart p1b);
+eq(p1b.start, 25200); eq(p1b.duration, 150);
+
+// WaitForMotion: fixed interval
+fact(arm.WaitForMotion waitP1);
+eq(waitP1.start, 25350);
+eq(waitP1.end, 27600);
+
+// ═══ Goal ═══
+goal(arm.Done missionGoal);
+leq(1, missionGoal.start);
+leq(missionGoal.end, 55000);

@@ -1,0 +1,68 @@
+// arm-mission-model.nddl
+// Robotic arm mission: 6 phases, each a fixed-duration action.
+// Phase 4/5 near SWA require comm + occlusion.
+// Direct met_by chain: Phase2 → Phase3 → Phase4 → Phase5 → Phase6
+
+class CommWindow extends Timeline {
+    predicate InComms  {}
+    predicate OutComms {}
+}
+
+class OcclusionSWA extends Timeline {
+    predicate Active   {}
+    predicate Inactive {}
+}
+
+class Arm extends Timeline {
+    CommWindow     comm;
+    OcclusionSWA   occlusion;
+
+    predicate BigArmRestart   {}   // 1a  980s (fact)
+    predicate SmallArmRestart {}   // 1b  150s (fact)
+    predicate WaitForMotion   {}   // idle
+
+    action Phase2  {}   // Platform config: 3530s
+    action Phase3  {}   // Big arm assembly: 1840s
+    action Phase4  {}   // Small arm to SWA: 770s  [occlusion]
+    action Phase5  {}   // Visual capture: 460s    [occlusion]
+    action Phase6  {}   // Standalone setup: 1560s
+
+    predicate Done {}
+
+    Arm(CommWindow _c, OcclusionSWA _o) {
+        comm = _c; occlusion = _o;
+    }
+}
+
+Arm::Phase2 {
+    eq(duration, 3530);
+    met_by(condition object.WaitForMotion);
+    contained_by(condition object.comm.InComms);
+}
+
+Arm::Phase3 {
+    eq(duration, 1840);
+    met_by(condition object.Phase2);
+    contained_by(condition object.comm.InComms);
+}
+
+Arm::Phase4 {
+    eq(duration, 770);
+    met_by(condition object.Phase3);
+    contained_by(condition object.comm.InComms);
+    contained_by(condition object.occlusion.Inactive);
+}
+
+Arm::Phase5 {
+    eq(duration, 460);
+    met_by(condition object.Phase4);
+    contained_by(condition object.comm.InComms);
+    contained_by(condition object.occlusion.Inactive);
+}
+
+Arm::Phase6 {
+    eq(duration, 1560);
+    met_by(condition object.Phase5);
+    contained_by(condition object.comm.InComms);
+    meets(effect object.Done);
+}
