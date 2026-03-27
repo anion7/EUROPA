@@ -1,0 +1,79 @@
+// arm-mission-model.nddl  (occlusion scenario)
+// Same as base model but Phase6 links to Phase5 via an IdleP56 gap,
+// allowing the planner to schedule Phase6 in a later comm window.
+
+class CommWindow extends Timeline {
+    predicate InComms  {}
+    predicate OutComms {}
+}
+
+class OcclusionSWA extends Timeline {
+    predicate Active   {}
+    predicate Inactive {}
+}
+
+class Arm extends Timeline {
+    CommWindow     comm;
+    OcclusionSWA   occlusion;
+
+    predicate BigArmRestart   {}
+    predicate SmallArmRestart {}
+    predicate WaitForMotion   {}
+
+    action Phase2  {}   // 3530s
+    action Phase3  {}   // 1840s
+
+    predicate IdleP3  {}  // gap: Phase3 → wait for occlusion clear → Phase4
+
+    action Phase4  {}   // 770s  [occlusion]
+    action Phase5  {}   // 460s  [occlusion]
+
+    predicate IdleP56 {}  // gap: Phase5 → wait for comm → Phase6
+
+    action Phase6  {}   // 1560s
+    predicate Done {}
+
+    Arm(CommWindow _c, OcclusionSWA _o) {
+        comm = _c; occlusion = _o;
+    }
+}
+
+// Phase 2: starts after WaitForMotion
+Arm::Phase2 {
+    eq(duration, 3530);
+    met_by(condition object.WaitForMotion);
+    contained_by(condition object.comm.InComms);
+}
+
+// Phase 3: immediately after Phase 2, then IdleP3 gap
+Arm::Phase3 {
+    eq(duration, 1840);
+    met_by(condition object.Phase2);
+    contained_by(condition object.comm.InComms);
+    meets(effect object.IdleP3);
+}
+
+// Phase 4: after IdleP3 gap, needs comm + no occlusion
+Arm::Phase4 {
+    eq(duration, 770);
+    met_by(condition object.IdleP3);
+    contained_by(condition object.comm.InComms);
+    contained_by(condition object.occlusion.Inactive);
+}
+
+// Phase 5: immediately after Phase 4, then IdleP56 gap
+Arm::Phase5 {
+    eq(duration, 460);
+    met_by(condition object.Phase4);
+    contained_by(condition object.comm.InComms);
+    contained_by(condition object.occlusion.Inactive);
+    meets(effect object.IdleP56);
+}
+
+// Phase 6: after IdleP56 gap (allows cross-window scheduling)
+Arm::Phase6 {
+    eq(duration, 1560);
+    met_by(condition object.IdleP56);
+    contained_by(condition object.comm.InComms);
+    meets(effect object.Done);
+}

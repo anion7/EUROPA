@@ -1,0 +1,67 @@
+// arm-mission-initial-state.nddl
+// Scenario: SWA occlusion ACTIVE during the natural Phase 4/5 window,
+// forcing the planner to delay SWA operations until occlusion clears.
+//
+// Key design: Two occlusion bursts at [32500,33500] and [34100,34600]
+// overlap with the earliest possible Phase4 start (~32970), so the
+// planner must wait until T=34600 to begin Phase 4.
+// A comm gap [36200,38000] after Phase 6 adds realism.
+
+#include "PlannerConfig.nddl"
+#include "arm-mission-model.nddl"
+
+PlannerConfig world = new PlannerConfig(0, 55000, 5000);
+
+CommWindow   commState = new CommWindow();
+OcclusionSWA occSWA    = new OcclusionSWA();
+Arm          arm       = new Arm(commState, occSWA);
+
+close();
+
+// ═══ Communication windows ═══
+// C01 [0, 4000]        — Phase 1a
+// G01 [4000, 22000]    — long gap
+// C02 [22000, 26200]   — Phase 1b
+// G02 [26200, 27600]   — short gap
+// C03 [27600, 36200]   — Phase 2,3 + wait + Phase 4,5
+// G03 [36200, 38000]   — comm gap after Phase 5
+// C04 [38000, 46000]   — Phase 6
+// G04 [46000, 49000]   — gap
+// C05 [49000, 55000]   — tail
+
+fact(commState.InComms  c01); eq(c01.start, 0);     eq(c01.end, 4000);
+fact(commState.OutComms g01); eq(g01.start, 4000);  eq(g01.end, 22000);
+fact(commState.InComms  c02); eq(c02.start, 22000); eq(c02.end, 26200);
+fact(commState.OutComms g02); eq(g02.start, 26200); eq(g02.end, 27600);
+fact(commState.InComms  c03); eq(c03.start, 27600); eq(c03.end, 36200);
+fact(commState.OutComms g03); eq(g03.start, 36200); eq(g03.end, 38000);
+fact(commState.InComms  c04); eq(c04.start, 38000); eq(c04.end, 46000);
+fact(commState.OutComms g04); eq(g04.start, 46000); eq(g04.end, 49000);
+fact(commState.InComms  c05); eq(c05.start, 49000); eq(c05.end, 55000);
+
+// ═══ SWA occlusion: two bursts blocking Phase 4/5 ═══
+// Burst 1 [32500, 33500]: blocks the natural Phase4 start (~32970)
+// Burst 2 [34100, 34600]: blocks any attempt to squeeze Phase4 in [33500, 34270]
+// Phase4 must wait until T≥34600
+
+fact(occSWA.Inactive o01); eq(o01.start, 0);     eq(o01.end, 32500);
+fact(occSWA.Active   o02); eq(o02.start, 32500); eq(o02.end, 33500);
+fact(occSWA.Inactive o03); eq(o03.start, 33500); eq(o03.end, 34100);
+fact(occSWA.Active   o04); eq(o04.start, 34100); eq(o04.end, 34600);
+fact(occSWA.Inactive o05); eq(o05.start, 34600); eq(o05.end, 55000);
+
+// ═══ Phase 1 facts ═══
+fact(arm.BigArmRestart p1a);
+eq(p1a.start, 0); eq(p1a.duration, 980);
+
+fact(arm.SmallArmRestart p1b);
+eq(p1b.start, 25200); eq(p1b.duration, 150);
+
+fact(arm.WaitForMotion waitP1);
+eq(waitP1.start, 25350);
+eq(waitP1.end, 27600);
+
+// ═══ Goal ═══
+goal(arm.Done missionGoal);
+leq(1, missionGoal.start);
+leq(missionGoal.end, 55000);
