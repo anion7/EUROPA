@@ -1,36 +1,79 @@
-// Case 2: Phase4→5→6 all in Vis12 (continuous). Occ forces wait after Phase3.
+// case2-initial-state.nddl
+// Corrected: Phase2A=2410s (solar panel), Phase2B=1120s (camera+disables)
+// EUROPA solves Phase4→5→6 chain in Vis12 after occ delay.
+
 #include "PlannerConfig.nddl"
 #include "case2-model.nddl"
-PlannerConfig world = new PlannerConfig(0, 75000, 5000);
-CommWindow cs = new CommWindow(); OcclusionSWA os = new OcclusionSWA();
-Arm arm = new Arm(cs, os); close();
 
-// Comm (minimal)
+PlannerConfig world = new PlannerConfig(0, 75000, 5000);
+CommWindow cs = new CommWindow();
+OcclusionSWA os = new OcclusionSWA();
+Arm arm = new Arm(cs, os);
+close();
+
+// ═══ Communication windows (TLE-computed) ═══
 fact(cs.InComms  c01); eq(c01.start, 0);     eq(c01.end, 15330);
 fact(cs.OutComms g01); eq(g01.start, 15330); eq(g01.end, 47640);
-fact(cs.InComms  c02); eq(c02.start, 47640); eq(c02.end, 51010);
+fact(cs.InComms  c02); eq(c02.start, 47640); eq(c02.end, 51010);   // Vis9
 fact(cs.OutComms g02); eq(g02.start, 51010); eq(g02.end, 53560);
-fact(cs.InComms  c03); eq(c03.start, 53560); eq(c03.end, 56850);
+fact(cs.InComms  c03); eq(c03.start, 53560); eq(c03.end, 56850);   // Vis10
 fact(cs.OutComms g03); eq(g03.start, 56850); eq(g03.end, 59430);
-fact(cs.InComms  c04); eq(c04.start, 59430); eq(c04.end, 62870);
+fact(cs.InComms  c04); eq(c04.start, 59430); eq(c04.end, 62870);   // Vis11
 fact(cs.OutComms g04); eq(g04.start, 62870); eq(g04.end, 65360);
-fact(cs.InComms  c05); eq(c05.start, 65360); eq(c05.end, 68830);
+fact(cs.InComms  c05); eq(c05.start, 65360); eq(c05.end, 68830);   // Vis12
 fact(cs.OutComms g05); eq(g05.start, 68830); eq(g05.end, 75000);
 
-// Occ
+// ═══ SWA occlusion (TLE-computed, beam=5deg) ═══
 fact(os.Inactive o01); eq(o01.start, 0);     eq(o01.end, 61750);
 fact(os.Active   o02); eq(o02.start, 61750); eq(o02.end, 62180);
 fact(os.Inactive o03); eq(o03.start, 62180); eq(o03.end, 75000);
 
-// Pre-placed facts
-fact(arm.BigArmRestart p1a); eq(p1a.start, 12040); eq(p1a.duration, 980);
-fact(arm.SmallArmRestart p1b); eq(p1b.start, 47640); eq(p1b.duration, 150);
-fact(arm.WaitP2 wp2); eq(wp2.start, 47790); eq(wp2.end, 47791);
-fact(arm.Phase2A p2a); eq(p2a.start, 47791); eq(p2a.duration, 3219);
-fact(arm.Phase2B p2b); eq(p2b.start, 53560); eq(p2b.duration, 160);
-fact(arm.WaitP3 wp3); eq(wp3.start, 53720); eq(wp3.end, 59430);
-fact(arm.Phase3 p3); eq(p3.start, 59430); eq(p3.duration, 1840);
-fact(arm.IdleOcc idle); eq(idle.start, 61270); eq(idle.end, 65360);
+// ═══ Pre-placed facts (Phase1, Phase2, Phase3, IdleOcc) ═══
 
-// Goal: solver schedules Phase4→5→6→Done in Vis12
-goal(arm.Done g); leq(65360, g.start); leq(g.end, 75000);
+// Phase 1a: BigArm restart in Vis3 [12040,15330], Phase3前12.9h
+fact(arm.BigArmRestart p1a);
+eq(p1a.start, 12040);
+eq(p1a.duration, 980);
+
+// Phase 1b: SmallArm restart at Vis9 start, Phase4前4.9h
+fact(arm.SmallArmRestart p1b);
+eq(p1b.start, 47640);
+eq(p1b.duration, 150);
+
+// Bridge: SmallArm(47790) → Phase2A
+fact(arm.WaitP2 wp2);
+eq(wp2.start, 47790);
+eq(wp2.end, 48100);
+
+// Phase 2A: solar panel setup (2410s) in Vis9 [47640,51010]
+fact(arm.Phase2A p2a);
+eq(p2a.start, 48100);
+eq(p2a.duration, 2410);
+// p2a ends at 50510, within Vis9 [47640,51010] ✓
+
+// Phase 2B: camera + disable commands (1120s) in Vis10 [53560,56850]
+fact(arm.Phase2B p2b);
+eq(p2b.start, 53560);
+eq(p2b.duration, 1120);
+// p2b ends at 54680, within Vis10 [53560,56850] ✓
+
+// Bridge: Phase2B → Phase3
+fact(arm.WaitP3 wp3);
+eq(wp3.start, 54680);
+eq(wp3.end, 59430);
+
+// Phase 3: big arm motion (1840s) in Vis11 [59430,62870]
+fact(arm.Phase3 p3);
+eq(p3.start, 59430);
+eq(p3.duration, 1840);
+// p3 ends at 61270, within Vis11 ✓
+
+// IdleOcc: wait for occ [61750,62180] to clear + comm gap [62870,65360]
+fact(arm.IdleOcc idle);
+eq(idle.start, 61270);
+eq(idle.end, 65360);
+
+// ═══ Goal: EUROPA solves Phase4→5→6→Done in Vis12 ═══
+goal(arm.Done missionGoal);
+leq(65360, missionGoal.start);
+leq(missionGoal.end, 75000);

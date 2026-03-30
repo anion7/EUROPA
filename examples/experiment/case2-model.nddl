@@ -1,15 +1,47 @@
-// case2-model.nddl — Phase4→5 in one window (Vis12), Phase6 also in Vis12 (continuous).
+// case2-model.nddl
+// Phase2A = solar panel setup (2410s)
+// Phase2B = camera + 4 disable commands (960+40+60+40+20 = 1120s)
+// Phase4→5→6 solved by EUROPA, rest pre-placed as facts.
+
 class CommWindow extends Timeline { predicate InComms {} predicate OutComms {} }
 class OcclusionSWA extends Timeline { predicate Active {} predicate Inactive {} }
+
 class Arm extends Timeline {
     CommWindow comm; OcclusionSWA occlusion;
-    predicate BigArmRestart {} predicate SmallArmRestart {} predicate WaitP2 {}
-    predicate Phase2A {} predicate Phase2B {} predicate WaitP3 {}
-    predicate Phase3 {} predicate IdleOcc {}
-    action Phase4 {} action Phase5 {} action Phase6 {}
+    predicate BigArmRestart {}    // 980s fact
+    predicate SmallArmRestart {}  // 150s fact
+    predicate WaitP2 {}           // bridge fact
+    predicate Phase2A {}          // 2410s fact (solar panel)
+    predicate Phase2B {}          // 1120s fact (camera + disables)
+    predicate WaitP3 {}           // bridge fact
+    predicate Phase3 {}           // 1840s fact
+    predicate IdleOcc {}          // occ+gap wait fact
+
+    action Phase4 {}   // 770s  [comm + no occ]
+    action Phase5 {}   // 460s  [comm + no occ]
+    action Phase6 {}   // 1560s [comm]
     predicate Done {}
+
     Arm(CommWindow _c, OcclusionSWA _o) { comm=_c; occlusion=_o; }
 }
-Arm::Phase4 { eq(duration,770);  met_by(condition object.IdleOcc); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
-Arm::Phase5 { eq(duration,460);  met_by(condition object.Phase4); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
-Arm::Phase6 { eq(duration,1560); met_by(condition object.Phase5); contained_by(condition object.comm.InComms); meets(effect object.Done); }
+
+Arm::Phase4 {
+    eq(duration, 770);
+    met_by(condition object.IdleOcc);
+    contained_by(condition object.comm.InComms);
+    contained_by(condition object.occlusion.Inactive);
+}
+
+Arm::Phase5 {
+    eq(duration, 460);
+    met_by(condition object.Phase4);
+    contained_by(condition object.comm.InComms);
+    contained_by(condition object.occlusion.Inactive);
+}
+
+Arm::Phase6 {
+    eq(duration, 1560);
+    met_by(condition object.Phase5);
+    contained_by(condition object.comm.InComms);
+    meets(effect object.Done);
+}
