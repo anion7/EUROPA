@@ -1,0 +1,38 @@
+#include "PlannerConfig.nddl"
+#include "case1-model.nddl"
+PlannerConfig world = new PlannerConfig(0,66000,5000);
+CommWindow cs=new CommWindow(); OcclusionSWA os=new OcclusionSWA();
+Arm arm=new Arm(cs,os); close();
+fact(cs.OutComms g); eq(g.start,0); eq(g.end,6130);
+fact(cs.InComms c); eq(c.start,6130); eq(c.end,9490);
+fact(cs.OutComms g); eq(g.start,9490); eq(g.end,12040);
+fact(cs.InComms c); eq(c.start,12040); eq(c.end,15330);
+fact(cs.OutComms g); eq(g.start,15330); eq(g.end,17890);
+fact(cs.InComms c); eq(c.start,17890); eq(c.end,21160);
+fact(cs.OutComms g); eq(g.start,21160); eq(g.end,23720);
+fact(cs.InComms c); eq(c.start,23720); eq(c.end,27030);
+fact(cs.OutComms g); eq(g.start,27030); eq(g.end,29580);
+fact(cs.InComms c); eq(c.start,29580); eq(c.end,33000);
+fact(cs.OutComms g); eq(g.start,33000); eq(g.end,35550);
+fact(cs.InComms c); eq(c.start,35550); eq(c.end,39060);
+fact(cs.OutComms g); eq(g.start,39060); eq(g.end,41610);
+fact(cs.InComms c); eq(c.start,41610); eq(c.end,45090);
+fact(cs.OutComms g); eq(g.start,45090); eq(g.end,47640);
+fact(cs.InComms c); eq(c.start,47640); eq(c.end,51010);
+fact(cs.OutComms g); eq(g.start,51010); eq(g.end,53560);
+fact(cs.InComms c); eq(c.start,53560); eq(c.end,56850);
+fact(cs.OutComms g); eq(g.start,56850); eq(g.end,59430);
+fact(cs.InComms c); eq(c.start,59430); eq(c.end,62870);
+fact(cs.OutComms g); eq(g.start,62870); eq(g.end,65360);
+fact(cs.InComms c); eq(c.start,65360); eq(c.end,68830);
+fact(os.Inactive o); eq(o.start,0); eq(o.end,61750);
+fact(os.Active o); eq(o.start,61750); eq(o.end,62180);
+fact(os.Inactive o); eq(o.start,62180); eq(o.end,66000);
+fact(arm.BigArmRestart p1a); eq(p1a.start,9380); eq(p1a.duration,980);
+fact(arm.SmallArmRestart p1b); eq(p1b.start,35550); eq(p1b.duration,150);
+fact(arm.Phase2Settings p2); eq(p2.start,35700); eq(p2.duration,3530);
+fact(arm.WaitForMotion w); eq(w.start,39230); eq(w.end,53560);
+fact(arm.Phase3 p3); eq(p3.start,53560); eq(p3.duration,1840);
+fact(arm.IdleOcc idle); eq(idle.start,55400); eq(idle.end,55400);
+fact(arm.Idle56 idle56); eq(idle56.start,56630); eq(idle56.end,59430);
+goal(arm.Done g); leq(1,g.start); leq(g.end,66000);
