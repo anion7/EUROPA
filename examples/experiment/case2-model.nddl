@@ -1,14 +1,15 @@
+// case2-model.nddl — Phase4→5 in one window (Vis12), Phase6 also in Vis12 (continuous).
 class CommWindow extends Timeline { predicate InComms {} predicate OutComms {} }
 class OcclusionSWA extends Timeline { predicate Active {} predicate Inactive {} }
 class Arm extends Timeline {
     CommWindow comm; OcclusionSWA occlusion;
-    predicate BigArmRestart {} predicate SmallArmRestart {} predicate Phase2Settings {}
-    predicate WaitForMotion {}
-    action Phase3 {} predicate IdleOcc {}
-    action Phase4 {} action Phase5 {} predicate Idle56 {} action Phase6 {} predicate Done {}
+    predicate BigArmRestart {} predicate SmallArmRestart {} predicate WaitP2 {}
+    predicate Phase2A {} predicate Phase2B {} predicate WaitP3 {}
+    predicate Phase3 {} predicate IdleOcc {}
+    action Phase4 {} action Phase5 {} action Phase6 {}
+    predicate Done {}
     Arm(CommWindow _c, OcclusionSWA _o) { comm=_c; occlusion=_o; }
 }
-Arm::Phase3 { eq(duration,1840); contained_by(condition object.comm.InComms); meets(effect object.IdleOcc); }
-Arm::Phase4 { eq(duration,770); met_by(condition object.IdleOcc); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
-Arm::Phase5 { eq(duration,460); met_by(condition object.Phase4); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
+Arm::Phase4 { eq(duration,770);  met_by(condition object.IdleOcc); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
+Arm::Phase5 { eq(duration,460);  met_by(condition object.Phase4); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
 Arm::Phase6 { eq(duration,1560); met_by(condition object.Phase5); contained_by(condition object.comm.InComms); meets(effect object.Done); }

@@ -1,14 +1,17 @@
+// case1-model.nddl
+// Two chains: Phase3→4→5 (continuous in one window) and Phase6 (separate window).
 class CommWindow extends Timeline { predicate InComms {} predicate OutComms {} }
 class OcclusionSWA extends Timeline { predicate Active {} predicate Inactive {} }
 class Arm extends Timeline {
     CommWindow comm; OcclusionSWA occlusion;
-    predicate BigArmRestart {} predicate SmallArmRestart {} predicate Phase2Settings {}
-    predicate WaitForMotion {}
-    action Phase3 {} predicate IdleOcc {}
-    action Phase4 {} action Phase5 {} predicate Idle56 {} action Phase6 {} predicate Done {}
+    predicate BigArmRestart {} predicate SmallArmRestart {} predicate WaitP2 {}
+    predicate Phase2A {} predicate Phase2B {} predicate WaitP3 {}
+    action Phase3 {} action Phase4 {} action Phase5 {}
+    predicate WaitP6 {}
+    action Phase6 {} predicate Done {}
     Arm(CommWindow _c, OcclusionSWA _o) { comm=_c; occlusion=_o; }
 }
-Arm::Phase3 { eq(duration,1840); contained_by(condition object.comm.InComms); meets(effect object.IdleOcc); }
-Arm::Phase4 { eq(duration,770); met_by(condition object.IdleOcc); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
-Arm::Phase5 { eq(duration,460); met_by(condition object.Phase4); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
-Arm::Phase6 { eq(duration,1560); met_by(condition object.Phase5); contained_by(condition object.comm.InComms); meets(effect object.Done); }
+Arm::Phase3 { eq(duration,1840); met_by(condition object.WaitP3); contained_by(condition object.comm.InComms); }
+Arm::Phase4 { eq(duration,770);  met_by(condition object.Phase3); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
+Arm::Phase5 { eq(duration,460);  met_by(condition object.Phase4); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
+Arm::Phase6 { eq(duration,1560); contained_by(condition object.comm.InComms); meets(effect object.Done); }

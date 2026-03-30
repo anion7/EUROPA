@@ -1,0 +1,42 @@
+// mission-model.nddl
+// Phase1a/1b are facts. Phase2A→2B→3→4→5→6 is the action chain.
+// All actions require contained_by InComms.
+// Phase4/5 also require contained_by OcclusionInactive.
+
+class CommWindow extends Timeline {
+    predicate InComms  {}
+    predicate OutComms {}
+}
+class OcclusionSWA extends Timeline {
+    predicate Active   {}
+    predicate Inactive {}
+}
+
+class Arm extends Timeline {
+    CommWindow comm;
+    OcclusionSWA occlusion;
+
+    predicate BigArmRestart   {}
+    predicate SmallArmRestart {}
+    predicate WaitP2 {}
+
+    action Phase2A {}   // 3370s
+    action Phase2B {}   // 160s
+    predicate WaitP3 {}
+
+    action Phase3 {}    // 1840s
+    action Phase4 {}    // 770s
+    action Phase5 {}    // 460s
+    predicate WaitP6 {}
+    action Phase6 {}    // 1560s
+    predicate Done {}
+
+    Arm(CommWindow _c, OcclusionSWA _o) { comm=_c; occlusion=_o; }
+}
+
+Arm::Phase2A { eq(duration,3370); met_by(condition object.WaitP2); contained_by(condition object.comm.InComms); }
+Arm::Phase2B { eq(duration,160);  met_by(condition object.Phase2A); contained_by(condition object.comm.InComms); }
+Arm::Phase3  { eq(duration,1840); met_by(condition object.WaitP3); contained_by(condition object.comm.InComms); }
+Arm::Phase4  { eq(duration,770);  met_by(condition object.Phase3); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
+Arm::Phase5  { eq(duration,460);  met_by(condition object.Phase4); contained_by(condition object.comm.InComms); contained_by(condition object.occlusion.Inactive); }
+Arm::Phase6  { eq(duration,1560); met_by(condition object.WaitP6); contained_by(condition object.comm.InComms); meets(effect object.Done); }
